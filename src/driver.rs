@@ -1,8 +1,9 @@
-use abcc::{Error, Result};
+use abcc::{Error, Result, lex};
 
 use clap::Parser;
-use std::{path::PathBuf, process::Command};
+use std::{fs, path::PathBuf, process::Command};
 
+/// Command-line interface, uses clap for argument parsing.
 #[derive(Debug, Parser)]
 #[command(author, version, about = "Another Bad C Compiler")]
 struct Cli {
@@ -26,6 +27,7 @@ struct Cli {
     input_file: PathBuf,
 }
 
+/// Primary driver function. Uses GCC for preprocessing, assembly, and linking.
 pub fn run() -> Result<()> {
     let args = Cli::parse();
 
@@ -35,7 +37,7 @@ pub fn run() -> Result<()> {
     let asm_path = src_path.with_extension("s");
     let exe_path = src_path.with_extension("");
 
-    /* 1. PREPROCESSING */
+    /*********************** 1. PREPROCESSING ***********************/
     // call preprocessor on src_path, produce pre_path
     let pre_res = Command::new("gcc")
         .arg("-E")
@@ -46,25 +48,39 @@ pub fn run() -> Result<()> {
         .status()?;
 
     if !pre_res.success() {
-        return Error;
+        return Err(Error::GccFailure {
+            status: pre_res.to_string(),
+        });
     }
 
-    /* 2. COMPILATION */
+    /************************ 2. COMPILATION ************************/
     // call compiler on pre_path, produce asm_path
-    let cmp_res = run_compilation(&pre_path, &asm_path)?;
+    let src = fs::read_to_string(&pre_path)?;
 
-    if !cmp_res.success() {
-        return Err(format!("compilation failed with status {cmp_res}").into());
+    let tokens = lex(&src)?;
+    if args.lex {
+        return Ok(());
     }
 
-    std::fs::remove_file(&pre_path)?;
+    // let ast = parse(&tokens)?;
+    // if args.parse {
+    //     return Ok(());
+    // }
+
+    // let asm = compile(&ast)?;
+    // if args.codegen {
+    //     return Ok(());
+    // }
+
+    // write assembly file
+    // std::fs::write(&asm_path, asm)?;
 
     // exit early if emit_assembly flag is set
     if args.emit_assembly {
         return Ok(());
     }
 
-    /* 3. ASSEMBLY & LINKING  */
+    /******************** 3. ASSEMBLY & LINKING  ********************/
     // call assembler and linker on asm_path, produce exe_path
     let asm_res = Command::new("gcc")
         .arg(&asm_path)
@@ -73,7 +89,9 @@ pub fn run() -> Result<()> {
         .status()?;
 
     if !asm_res.success() {
-        return Err(format!("assembly failed with status {asm_res}").into());
+        return Err(Error::GccFailure {
+            status: asm_res.to_string(),
+        });
     }
 
     // delete assembly file
@@ -81,5 +99,3 @@ pub fn run() -> Result<()> {
 
     Ok(())
 }
-
-fn run_compilation(pre_path: &PathBuf, asm_path: &PathBuf) -> Result<std::process::ExitStatus> {}

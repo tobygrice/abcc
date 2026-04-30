@@ -1,4 +1,4 @@
-use crate::abcc::error::{Error, Result};
+use crate::abcc::error::Result;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {

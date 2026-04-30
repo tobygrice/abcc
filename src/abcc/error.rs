@@ -7,6 +7,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum Error {
+    /// I/O error.
+    #[error("I/O failure: {0}")]
+    Io(#[from] std::io::Error),
+
     /// Invalid token found during lexing.
     #[error("Invalid token {token} at {line}:{column}")]
     InvalidToken {
@@ -15,6 +19,7 @@ pub enum Error {
         column: u32,
     },
 
+    /// GCC failure during preprocessing, assembly, or linking.
     #[error("GCC failure: {status}")]
     GccFailure { status: String },
 }

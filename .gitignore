@@ -1,4 +1,4 @@
 /target
-.obsidian
 *.s
 c_test_files
+.*
