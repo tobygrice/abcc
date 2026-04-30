@@ -1,5 +1,7 @@
+use abcc::{Error, Result};
+
 use clap::Parser;
-use std::{error::Error, path::PathBuf, process::Command};
+use std::{path::PathBuf, process::Command};
 
 #[derive(Debug, Parser)]
 #[command(author, version, about = "Another Bad C Compiler")]
@@ -24,7 +26,7 @@ struct Cli {
     input_file: PathBuf,
 }
 
-pub fn run() -> Result<(), Box<dyn Error>> {
+pub fn run() -> Result<()> {
     let args = Cli::parse();
 
     // declare file paths using idiomatic extensions
@@ -44,11 +46,16 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         .status()?;
 
     if !pre_res.success() {
-        return Err(format!("preprocessing failed with status {pre_res}").into());
+        return Error;
     }
 
     /* 2. COMPILATION */
     // call compiler on pre_path, produce asm_path
+    let cmp_res = run_compilation(&pre_path, &asm_path)?;
+
+    if !cmp_res.success() {
+        return Err(format!("compilation failed with status {cmp_res}").into());
+    }
 
     std::fs::remove_file(&pre_path)?;
 
@@ -74,3 +81,5 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+fn run_compilation(pre_path: &PathBuf, asm_path: &PathBuf) -> Result<std::process::ExitStatus> {}
